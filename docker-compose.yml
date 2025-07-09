@@ -1,15 +1,15 @@
 version: "3.9"
 services:
   backend:
-    image: demo
-    container_name: demo
+    image: notification-service
+    container_name: notification-service
     build:
       context: ./notification-service
     ports:
-      - "9000:80"
+      - "9000:8080"
   frontend:
-    image: demo-ui
-    container_name: demo-ui
+    image: frontend
+    container_name: frontend
     build:
       context: ./frontend
     ports:
