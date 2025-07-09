@@ -1,0 +1,140 @@
+version: '3.8'
+
+services:
+  # ===========================
+  # Databases
+  # ===========================
+
+  postgres-user:
+    image: postgres:15
+    container_name: postgres-user
+    environment:
+      POSTGRES_DB: userdb
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    networks:
+      - ecommerce
+
+  postgres-order:
+    image: postgres:15
+    container_name: postgres-order
+    environment:
+      POSTGRES_DB: orderdb
+      POSTGRES_USER: order
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5433:5432"
+    networks:
+      - ecommerce
+
+  postgres-payment:
+    image: postgres:15
+    container_name: postgres-payment
+    environment:
+      POSTGRES_DB: paymentdb
+      POSTGRES_USER: payment
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5434:5432"
+    networks:
+      - ecommerce
+
+  mongodb-catalog:
+    image: mongo:6
+    container_name: mongodb-catalog
+    ports:
+      - "27017:27017"
+    networks:
+      - ecommerce
+
+  redis-cart:
+    image: redis:7
+    container_name: redis-cart
+    ports:
+      - "6379:6379"
+    networks:
+      - ecommerce
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200"
+    networks:
+      - ecommerce
+
+  # ===========================
+  # Core Microservices
+  # ===========================
+
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    environment:
+      DATABASE_URL: postgres://user:password@postgres-user:5432/userdb
+    depends_on:
+      - postgres-user
+    networks:
+      - ecommerce
+
+  product-catalog-service:
+    build: ./product-catalog-service
+    container_name: product-catalog-service
+    environment:
+      MONGODB_URI: mongodb://mongodb-catalog:27017/catalog
+      ELASTICSEARCH_URI: http://elasticsearch:9200
+    depends_on:
+      - mongodb-catalog
+      - elasticsearch
+    networks:
+      - ecommerce
+
+  shopping-cart-service:
+    build: ./shopping-cart-service
+    container_name: shopping-cart-service
+    environment:
+      REDIS_HOST: redis-cart
+      REDIS_PORT: 6379
+    depends_on:
+      - redis-cart
+    networks:
+      - ecommerce
+
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    environment:
+      DATABASE_URL: postgres://order:password@postgres-order:5432/orderdb
+    depends_on:
+      - postgres-order
+    networks:
+      - ecommerce
+
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    environment:
+      DATABASE_URL: postgres://payment:password@postgres-payment:5432/paymentdb
+    depends_on:
+      - postgres-payment
+    networks:
+      - ecommerce
+
+  notification-service:
+    build: ./notification-service
+    container_name: notification-service
+    environment:
+      SENDGRID_API_KEY: your-sendgrid-key
+      TWILIO_ACCOUNT_SID: your-twilio-sid
+      TWILIO_AUTH_TOKEN: your-twilio-token
+    networks:
+      - ecommerce
+
+networks:
+  ecommerce:
+    driver: bridge
